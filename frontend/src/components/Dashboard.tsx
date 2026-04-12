@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FolderOpen, Zap, Shield, TrendingUp,
   Image, Video, Music, FileText, Code, Archive,
-  HardDrive, Activity, ChevronRight, Plus, X, Loader2,
+  HardDrive, Activity, ChevronRight, Plus, X, Loader2, Files,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { api } from '@/lib/api';
@@ -70,19 +70,17 @@ export default function Dashboard() {
     }
     setIsScanning(true);
     try {
-      const session = await api.startScan(scanPaths, true);
+      const session = await api.startScan(scanPaths, false);
       setCurrentSession(session);
       toast.success('Scan started!');
 
-      // Poll until done by checking the latest session
-      const poll = setInterval(async () => {
+      // Polling function checks the latest session
+      const pollFn = async () => {
         try {
           const sessions = await api.getSessions().catch(() => []);
           const latest = sessions[0];
           
-          // If the backend has created the session and it is no longer 'running'
           if (latest && latest.status !== 'running') {
-            clearInterval(poll);
             setIsScanning(false);
             setCurrentSession(latest);
 
@@ -101,11 +99,19 @@ export default function Dashboard() {
             } else {
               toast.error('Scan failed during execution.');
             }
+            return true; // indicates we should stop polling
           }
         } catch (e) {
-          // ignore network errors during polling
+          // ignore network errors
         }
-      }, 2000);
+        return false;
+      };
+
+      // Poll until done
+      const poll = setInterval(async () => {
+        const done = await pollFn();
+        if (done) clearInterval(poll);
+      }, 1500);
     } catch (err: any) {
       setIsScanning(false);
       const msg = err.response?.data?.detail || err.message;
