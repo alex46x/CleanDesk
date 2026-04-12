@@ -1,0 +1,171 @@
+/* src/index.css — Global styles + design tokens */
+
+/* ── Google Font (must be before @tailwind directives) ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Variables ── */
+:root {
+  --bg-primary:   #0f0f13;
+  --bg-secondary: #141418;
+  --bg-card:      #1a1a24;
+  --bg-glass:     rgba(255, 255, 255, 0.04);
+  --border:       rgba(255, 255, 255, 0.08);
+  --text-primary: #f0f0f8;
+  --text-muted:   #8888aa;
+  --brand:        #7c3aed;
+  --brand-glow:   rgba(124, 58, 237, 0.3);
+  --cyan:         #22d3ee;
+  --emerald:      #34d399;
+  --rose:         #fb7185;
+  --amber:        #fbbf24;
+}
+
+/* ── Base reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Glassmorphism card ── */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* ── Gradient text ── */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8 0%, #7c3aed 50%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glow effects ── */
+.glow-brand { box-shadow: 0 0 24px var(--brand-glow); }
+.glow-cyan  { box-shadow: 0 0 24px rgba(34, 211, 238, 0.25); }
+
+/* ── Animated gradient background ── */
+.bg-animated-gradient {
+  background: linear-gradient(-45deg, #0f0f13, #1a0a2e, #0a1a2e, #0f0f13);
+  background-size: 400% 400%;
+  animation: gradient 12s ease infinite;
+}
+
+@keyframes gradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Progress bar ── */
+.progress-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--brand), var(--cyan));
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: visible;
+}
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+/* ── Custom title bar drag region ── */
+.title-bar {
+  -webkit-app-region: drag;
+}
+.title-bar button {
+  -webkit-app-region: no-drag;
+}
+
+/* ── Sidebar nav item ── */
+.nav-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+         text-[var(--text-muted)] transition-all duration-200 cursor-pointer;
+}
+.nav-item:hover {
+  @apply bg-white/5 text-white;
+}
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(34,211,238,0.1));
+  border: 1px solid rgba(124,58,237,0.3);
+  @apply text-white;
+}
+
+/* ── Category badge ── */
+.badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+}
+
+/* ── Stat card hover ── */
+.stat-card {
+  @apply glass transition-all duration-300 cursor-default;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(124,58,237,0.2);
+}
+
+/* ── Button variants ── */
+.btn-primary {
+  @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
+         transition-all duration-200 active:scale-95;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+  color: white;
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 28px rgba(124, 58, 237, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm
+         transition-all duration-200 active:scale-95 border;
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.09);
+}
+
+/* ── Data table ── */
+.table-row {
+  @apply flex items-center gap-4 px-4 py-3 rounded-lg border border-transparent
+         transition-colors duration-150 text-sm;
+}
+.table-row:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+}

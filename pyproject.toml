@@ -1,0 +1,29 @@
+# pyproject.toml — Root project configuration
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name            = "smart-file-organizer"
+version         = "1.0.0"
+description     = "High-performance AI-powered file organizer"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "W", "I", "UP", "B", "C4", "PIE", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.isort]
+known-first-party = ["backend"]
+
+[tool.mypy]
+python_version  = "3.11"
+strict          = false
+warn_unreachable = true
+ignore_missing_imports = true

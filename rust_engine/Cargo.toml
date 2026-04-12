@@ -1,0 +1,34 @@
+[package]
+name = "smart_organizer_engine"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance scanning and hashing engine for Smart File Organizer AI"
+
+[lib]
+name = "smart_organizer_engine"
+crate-type = ["cdylib"]   # Shared library callable from Python via PyO3
+
+[dependencies]
+# Python FFI bridge
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# Parallel iteration
+rayon = "1.10"
+
+# Fast hashing (xxHash)
+twox-hash = "2.0"
+
+# Cross-platform filesystem walking
+walkdir = "2.5"
+
+# Error handling
+anyhow = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true           # Strip debug symbols → smaller .so/.dll
+
+[profile.dev]
+opt-level = 1          # Slightly optimised dev builds
