@@ -21,7 +21,7 @@ let backendProcess = null;
 // ---------------------------------------------------------------------------
 function startBackend() {
   const backendCmd = isDev
-    ? 'python'
+    ? path.join(__dirname, '..', '..', '.venv', 'Scripts', 'python.exe')
     : path.join(process.resourcesPath, 'backend', 'smart_organizer.exe');
 
   const backendArgs = isDev
@@ -62,7 +62,7 @@ function createWindow() {
     backgroundColor: '#0f0f13',
     frame: false,         // Custom title bar in React
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,

@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.websocket import websocket_endpoint, ws_manager
-from backend.database.connection import get_db
+from backend.database.connection import get_db, AsyncSessionLocal
 from backend.database.models import FileRecord, ScanSession
 from backend.schemas.schemas import (
     FileInfoResponse,
@@ -28,23 +28,25 @@ router = APIRouter(prefix="/scan", tags=["Scan"])
 async def start_scan(
     payload: ScanRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
 ) -> ScanSessionResponse:
     """Kick off a background scan and return the session stub immediately."""
-    service = ScanService(db)
     progress_queue: asyncio.Queue[ProgressEvent | None] = asyncio.Queue()
 
     async def _run() -> None:
-        try:
-            await service.start_scan(
-                root_paths=payload.root_paths,
-                incremental=payload.incremental,
-                exclude_patterns=payload.exclude_patterns,
-                progress_queue=progress_queue,
-            )
-        finally:
-            await progress_queue.put(None)  # signal done
-            await ws_manager.broadcast({"event": "scan_done"})
+        async with AsyncSessionLocal() as session_db:
+            service = ScanService(session_db)
+            try:
+                await service.start_scan(
+                    root_paths=payload.root_paths,
+                    incremental=payload.incremental,
+                    exclude_patterns=payload.exclude_patterns,
+                    progress_queue=progress_queue,
+                )
+            except Exception:
+                await ws_manager.broadcast({"event": "scan_done", "error": True})
+            finally:
+                await progress_queue.put(None)  # signal done
+                await ws_manager.broadcast({"event": "scan_done"})
 
     background_tasks.add_task(_run)
 

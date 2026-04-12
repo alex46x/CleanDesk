@@ -74,17 +74,20 @@ export default function Dashboard() {
       setCurrentSession(session);
       toast.success('Scan started!');
 
-      // Poll until done
+      // Poll until done by checking the latest session
       const poll = setInterval(async () => {
-        if (session.id > 0) {
-          const updated = await api.getSession(session.id).catch(() => null);
-          if (updated?.status === 'done') {
+        try {
+          const sessions = await api.getSessions().catch(() => []);
+          const latest = sessions[0];
+          
+          // If the backend has created the session and it is no longer 'running'
+          if (latest && latest.status !== 'running') {
             clearInterval(poll);
             setIsScanning(false);
-            setCurrentSession(updated);
+            setCurrentSession(latest);
 
             // Load files & compute stats
-            const files = await api.getFiles(updated.id);
+            const files = await api.getFiles(latest.id);
             setFiles(files);
             const stats: Record<string, number> = {};
             files.forEach((f) => {
@@ -92,13 +95,21 @@ export default function Dashboard() {
               stats[cat] = (stats[cat] || 0) + 1;
             });
             setCategoryStats(stats);
-            toast.success(`Scan complete — ${updated.total_files} files found`);
+            
+            if (latest.status === 'done') {
+              toast.success(`Scan complete — ${latest.total_files} files found`);
+            } else {
+              toast.error('Scan failed during execution.');
+            }
           }
+        } catch (e) {
+          // ignore network errors during polling
         }
       }, 2000);
     } catch (err: any) {
       setIsScanning(false);
-      toast.error(`Scan failed: ${err.message}`);
+      const msg = err.response?.data?.detail || err.message;
+      toast.error(`Scan failed: ${msg}`);
     }
   }, [scanPaths, setIsScanning, setCurrentSession, setFiles, setCategoryStats]);
 
@@ -121,7 +132,8 @@ export default function Dashboard() {
           : `Organized ${result.succeeded} files!`
       );
     } catch (err: any) {
-      toast.error(`Organize failed: ${err.message}`);
+      const msg = err.response?.data?.detail || err.message;
+      toast.error(`Organize failed: ${msg}`);
     } finally {
       setIsOrganizing(false);
     }
