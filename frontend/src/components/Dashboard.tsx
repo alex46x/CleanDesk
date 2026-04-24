@@ -69,6 +69,8 @@ export default function Dashboard() {
       return;
     }
     setIsScanning(true);
+    setFiles([]);
+    setCategoryStats({});
     try {
       const session = await api.startScan(scanPaths, false);
       setCurrentSession(session);
@@ -84,15 +86,8 @@ export default function Dashboard() {
             setIsScanning(false);
             setCurrentSession(latest);
 
-            // Load files & compute stats
-            const files = await api.getFiles(latest.id);
-            setFiles(files);
-            const stats: Record<string, number> = {};
-            files.forEach((f) => {
-              const cat = f.category || 'Others';
-              stats[cat] = (stats[cat] || 0) + 1;
-            });
-            setCategoryStats(stats);
+            const stats = await api.getSessionStats(latest.id);
+            setCategoryStats(stats.categories);
             
             if (latest.status === 'done') {
               toast.success(`Scan complete — ${latest.total_files} files found`);

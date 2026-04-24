@@ -58,6 +58,8 @@ class FileRecord(Base):
     __tablename__ = "files"
     __table_args__ = (
         Index("ix_files_path", "path", unique=True),
+        Index("ix_files_scan_session_id", "scan_session_id"),
+        Index("ix_files_session_category", "scan_session_id", "category"),
         Index("ix_files_category", "category"),
         Index("ix_files_extension", "extension"),
         Index("ix_files_size", "size"),

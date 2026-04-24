@@ -91,5 +91,15 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if _is_sqlite:
+            # Backfill performance-critical indexes for existing local DBs.
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_files_scan_session_id "
+                "ON files (scan_session_id)"
+            )
+            await conn.exec_driver_sql(
+                "CREATE INDEX IF NOT EXISTS ix_files_session_category "
+                "ON files (scan_session_id, category)"
+            )
 
     logger.info("Database initialised at %s", DATABASE_URL)

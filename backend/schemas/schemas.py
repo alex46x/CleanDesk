@@ -54,6 +54,19 @@ class FileInfoResponse(BaseModel):
     scan_session_id: Optional[int]
 
 
+class FileListResponse(BaseModel):
+    items: list[FileInfoResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class SessionStatsResponse(BaseModel):
+    session_id: int
+    total_files: int
+    categories: dict[str, int]
+
+
 # ---------------------------------------------------------------------------
 # Organize
 # ---------------------------------------------------------------------------

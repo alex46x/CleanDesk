@@ -13,13 +13,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import AsyncGenerator
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.scanner import FileInfo, FileScanner, ScanStats
+from backend.core.scanner import FileInfo, FileScanner
 from backend.database.models import FileRecord, ScanSession
 from backend.schemas.schemas import ProgressEvent
 
@@ -116,21 +115,19 @@ class ScanService:
         loop = asyncio.get_running_loop()
         file_queue: asyncio.Queue[FileInfo | None] = asyncio.Queue(maxsize=2000)
 
-        # Run scanner in executor so it doesn't block event loop
-        async def _scan_thread() -> None:
+        def _scan_thread() -> None:
             scanner = FileScanner(
                 root_paths=root_paths,
                 exclude_patterns=exclude_patterns,
                 incremental_cache=cache,
             )
-            for fi in scanner.scan():
-                await asyncio.wrap_future(
-                    loop.run_in_executor(None, lambda: None)
-                )  # yield point
-                await file_queue.put(fi)
-            await file_queue.put(None)  # sentinel
+            try:
+                for fi in scanner.scan():
+                    asyncio.run_coroutine_threadsafe(file_queue.put(fi), loop).result()
+            finally:
+                asyncio.run_coroutine_threadsafe(file_queue.put(None), loop).result()
 
-        scan_task = asyncio.create_task(_scan_thread())
+        scan_task = asyncio.create_task(asyncio.to_thread(_scan_thread))
 
         total = 0
         batch: list[FileInfo] = []

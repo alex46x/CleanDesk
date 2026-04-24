@@ -48,6 +48,12 @@
       "output": "dist-electron"
     },
     "files": ["dist/**/*", "electron/**/*"],
+    "extraResources": [
+      {
+        "from": "../dist/smart_organizer.exe",
+        "to": "backend/smart_organizer.exe"
+      }
+    ],
     "win": {
       "target": ["nsis", "portable"],
       "icon": "public/icon.ico"

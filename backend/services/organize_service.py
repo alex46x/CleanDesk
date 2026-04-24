@@ -9,7 +9,7 @@ import logging
 import time
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.mover import FileMover, MoveRequest, MoveResult, UndoManager
@@ -39,16 +39,17 @@ class OrganizeService:
         progress_queue: asyncio.Queue | None = None,
     ) -> OrganizeResponse:
         """Organize all files from a scan session into category sub-folders."""
-        # Fetch files from DB
         stmt = select(FileRecord).where(FileRecord.scan_session_id == session_id)
         if categories:
             stmt = stmt.where(FileRecord.category.in_(categories))
-        result = await self._db.execute(stmt)
-        files: list[FileRecord] = list(result.scalars().all())
+
+        total_stmt = select(func.count()).select_from(stmt.subquery())
+        total_files = int((await self._db.execute(total_stmt)).scalar_one())
+        file_stream = await self._db.stream_scalars(stmt.execution_options(yield_per=200))
 
         logger.info(
             "Organizing %d files (dry_run=%s, dest=%s)",
-            len(files),
+            total_files,
             dry_run,
             destination_base,
         )
@@ -58,7 +59,7 @@ class OrganizeService:
         succeeded = 0
         failed = 0
 
-        for i, file_rec in enumerate(files):
+        async for i, file_rec in _async_enumerate(file_stream):
             category = file_rec.category or "Others"
             dest_dir = str(Path(destination_base) / category)
 
@@ -68,9 +69,7 @@ class OrganizeService:
                 dry_run=dry_run,
             )
 
-            move_result: MoveResult = await asyncio.get_running_loop().run_in_executor(
-                None, mover.move, req
-            )
+            move_result: MoveResult = await asyncio.to_thread(mover.move, req)
 
             item = OrganizeResultItem(
                 source=move_result.source,
@@ -90,12 +89,15 @@ class OrganizeService:
                 failed += 1
                 await self._log_failure(file_rec, move_result, session_id)
 
+            if not dry_run and (i + 1) % 200 == 0:
+                await self._db.flush()
+
             if progress_queue and (i + 1) % 50 == 0:
                 await progress_queue.put(
                     ProgressEvent(
                         event="organize_progress",
                         session_id=session_id,
-                        total_files=len(files),
+                        total_files=total_files,
                         processed=i + 1,
                     )
                 )
@@ -103,7 +105,7 @@ class OrganizeService:
         await self._db.commit()
 
         return OrganizeResponse(
-            total=len(files),
+            total=total_files,
             succeeded=succeeded,
             failed=failed,
             dry_run=dry_run,
@@ -182,15 +184,11 @@ class OrganizeService:
             status="success",
             session_id=session_id,
         )
-        self._db.add(log)
-        await self._db.flush()
-
-        undo = UndoHistory(
-            log_id=log.id,
+        log.undo_entry = UndoHistory(
             original_path=file_rec.path,
             can_undo=True,
         )
-        self._db.add(undo)
+        self._db.add(log)
 
         # Update file record
         file_rec.path = move_result.destination
@@ -211,3 +209,10 @@ class OrganizeService:
             error_message=move_result.error,
         )
         self._db.add(log)
+
+
+async def _async_enumerate(iterable, start: int = 0):
+    index = start
+    async for item in iterable:
+        yield index, item
+        index += 1

@@ -22,18 +22,23 @@ function formatBytes(bytes: number): string {
 }
 
 export default function DuplicateDetector() {
-  const { files, currentSession } = useAppStore();
+  const { currentSession } = useAppStore();
   const [groups, setGroups] = useState<DuplicateGroup[]>([]);
   const [running, setRunning] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const runDetection = useCallback(async () => {
-    if (files.length === 0) {
+    if (!currentSession) {
       toast.error('Run a scan first from the Dashboard');
       return;
     }
     setRunning(true);
     try {
+      const files = await api.getAllFiles(currentSession.id, {
+        sortBy: 'size',
+        sortOrder: 'desc',
+      });
+
       // Client-side grouping by size first (backend hashing for production)
       // This is the preview implementation — the full Rust backend does 3-stage hashing
       const bySize: Record<number, string[]> = {};
@@ -64,7 +69,7 @@ export default function DuplicateDetector() {
     } finally {
       setRunning(false);
     }
-  }, [files]);
+  }, [currentSession]);
 
   const totalWasted = groups.reduce((s, g) => s + g.wasted_bytes, 0);
   const toggleExpand = (fp: string) => {
